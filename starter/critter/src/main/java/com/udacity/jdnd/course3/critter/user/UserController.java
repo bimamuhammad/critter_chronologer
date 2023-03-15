@@ -1,10 +1,22 @@
 package com.udacity.jdnd.course3.critter.user;
 
+import com.fasterxml.jackson.databind.util.BeanUtil;
+import com.udacity.jdnd.course3.critter.entity.Customer;
+import com.udacity.jdnd.course3.critter.entity.Employee;
+import com.udacity.jdnd.course3.critter.entity.Pet;
+import com.udacity.jdnd.course3.critter.repository.CustomerDAO;
+import com.udacity.jdnd.course3.critter.repository.EmployeeDAO;
+import com.udacity.jdnd.course3.critter.service.CustomerService;
+import com.udacity.jdnd.course3.critter.service.EmployeeService;
+import com.udacity.jdnd.course3.critter.service.PetService;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.DayOfWeek;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Handles web requests related to Users.
@@ -16,39 +28,71 @@ import java.util.Set;
 @RequestMapping("/user")
 public class UserController {
 
-    @PostMapping("/customer")
-    public CustomerDTO saveCustomer(@RequestBody CustomerDTO customerDTO){
-        throw new UnsupportedOperationException();
-    }
+    @Autowired
+    CustomerService customerService;
+    @Autowired
+    EmployeeService employeeService;
+    @Autowired
+    PetService petService;
 
     @GetMapping("/customer")
     public List<CustomerDTO> getAllCustomers(){
-        throw new UnsupportedOperationException();
+        return customerService.listAllCustomers().stream().map(
+                x->new CustomerDTO(x.getId(), x.getName(), x.getPhoneNumber(), x.getNotes(), petService.getPetsByOwnerId(x.getId()).stream().map(
+                        Pet::getId).collect(Collectors.toList()))
+        ).collect(Collectors.toList());
     }
 
-    @GetMapping("/customer/pet/{petId}")
-    public CustomerDTO getOwnerByPet(@PathVariable long petId){
-        throw new UnsupportedOperationException();
+
+    @PostMapping("/customer")
+    public CustomerDTO saveCustomer(@RequestBody CustomerDTO customerDTO) {
+        Customer customer = new Customer();
+        customer.setName(customerDTO.getName());
+        customer.setPhoneNumber(customerDTO.getPhoneNumber());
+        customerService.saveCustomer(customer);
+        CustomerDTO retCustomerDTO = new CustomerDTO();
+        BeanUtils.copyProperties(customer, retCustomerDTO);
+        return retCustomerDTO;
+    }
+
+    @GetMapping("/customer/{petId}")
+    public CustomerDTO getOwnerByPet(Long petid){
+        Customer customer = customerService.getCustomerByPetId(petid);
+        CustomerDTO customerDTO = new CustomerDTO();
+        customerDTO.setPetIds(customer.getPets().stream().map(Pet::getId).collect(Collectors.toList()));
+        BeanUtils.copyProperties(customer, customerDTO);
+        return customerDTO;
     }
 
     @PostMapping("/employee")
     public EmployeeDTO saveEmployee(@RequestBody EmployeeDTO employeeDTO) {
-        throw new UnsupportedOperationException();
+        Employee employee = new Employee();
+        employee.setSkills(employeeDTO.getSkills());
+        employee.setName(employeeDTO.getName());
+        employeeService.saveEmployee(employee);
+        employeeDTO.setId(employee.getId());
+        return employeeDTO;
     }
 
-    @PostMapping("/employee/{employeeId}")
+    @GetMapping("/employee/{employeeId}")
     public EmployeeDTO getEmployee(@PathVariable long employeeId) {
-        throw new UnsupportedOperationException();
+        Employee employee = employeeService.getEmployee(employeeId);
+        return new EmployeeDTO(employeeId, employee.getName(), employee.getSkills(), employee.getDaysAvailable());
     }
+
 
     @PutMapping("/employee/{employeeId}")
     public void setAvailability(@RequestBody Set<DayOfWeek> daysAvailable, @PathVariable long employeeId) {
-        throw new UnsupportedOperationException();
+        Employee employee = employeeService.getEmployee(employeeId);
+        employee.setDaysAvailable(daysAvailable);
+        employeeService.saveEmployee(employee);
     }
 
     @GetMapping("/employee/availability")
     public List<EmployeeDTO> findEmployeesForService(@RequestBody EmployeeRequestDTO employeeDTO) {
         throw new UnsupportedOperationException();
     }
+
+
 
 }
