@@ -56,8 +56,8 @@ public class UserController {
     }
 
     @GetMapping("/customer/{petId}")
-    public CustomerDTO getOwnerByPet(Long petid){
-        Customer customer = customerService.getCustomerByPetId(petid);
+    public CustomerDTO getOwnerByPet(@PathVariable Long petId){
+        Customer customer = customerService.getCustomerByPetId(petId);
         CustomerDTO customerDTO = new CustomerDTO();
         customerDTO.setPetIds(customer.getPets().stream().map(Pet::getId).collect(Collectors.toList()));
         BeanUtils.copyProperties(customer, customerDTO);
@@ -67,11 +67,11 @@ public class UserController {
     @PostMapping("/employee")
     public EmployeeDTO saveEmployee(@RequestBody EmployeeDTO employeeDTO) {
         Employee employee = new Employee();
-        employee.setSkills(employeeDTO.getSkills());
-        employee.setName(employeeDTO.getName());
-        employeeService.saveEmployee(employee);
-        employeeDTO.setId(employee.getId());
-        return employeeDTO;
+        BeanUtils.copyProperties(employeeDTO, employee);
+        employee = employeeService.saveEmployee(employee);
+        EmployeeDTO returnDTO = new EmployeeDTO();
+        BeanUtils.copyProperties(employee, returnDTO);
+        return returnDTO;
     }
 
     @GetMapping("/employee/{employeeId}")
@@ -90,7 +90,15 @@ public class UserController {
 
     @GetMapping("/employee/availability")
     public List<EmployeeDTO> findEmployeesForService(@RequestBody EmployeeRequestDTO employeeDTO) {
-        throw new UnsupportedOperationException();
+        List<Employee> employeeList = employeeService.
+                findEmployeeBySkillAndDaysavailable(
+                        employeeDTO.getSkills(), employeeDTO.getDate()
+                );
+        return employeeList.stream().map(x->{
+            EmployeeDTO employeeDTO1 = new EmployeeDTO();
+            BeanUtils.copyProperties(x, employeeDTO1);
+            return employeeDTO1;
+        }).collect(Collectors.toList());
     }
 
 
